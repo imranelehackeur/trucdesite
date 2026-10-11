@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>browse</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --bg-0: #050805; --bg-1: #07100a; --bg-2: #0a1a10; --bg-3: #0f2418; --bg-4: #16321f;
+    --line-1: #1a3a24; --line-2: #205030;
+    --text-0: #d8f5e0; --text-1: #a8d8b8; --text-2: #5f8f70; --text-3: #3d6048;
+    --accent: #00ff66; --accent-glow: #00ff88; --accent-dim: #009944; --accent-deep: #003d1a;
+    --r-sm: 8px; --r-md: 12px; --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    background: var(--bg-1); color: var(--text-0);
+    min-height: 100vh; font-size: 13px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  #matrix { position: fixed; inset: 0; z-index: 1; pointer-events: none; opacity: 0.35; }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background: radial-gradient(1200px 600px at 50% -10%, rgba(0,255,102,0.06), transparent 70%),
+                radial-gradient(800px 400px at 90% 100%, rgba(0,255,102,0.03), transparent 70%);
+    z-index: 2; pointer-events: none;
+  }
+  body::after {
+    content: ''; position: fixed; inset: 0;
+    background-image: repeating-linear-gradient(0deg, rgba(0,255,102,0.015) 0 1px, transparent 1px 2px),
+                      repeating-linear-gradient(90deg, rgba(0,255,102,0.008) 0 1px, transparent 1px 3px);
+    z-index: 3; pointer-events: none; opacity: 0.5;
+  }
+
+  header {
+    position: relative; z-index: 10;
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px;
+    background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+    border-bottom: 1px solid var(--line-1);
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-size: 16px; margin: 0; font-weight: 800; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--accent);
+    text-shadow: 0 0 4px rgba(0,255,102,0.6), 0 0 12px rgba(0,255,102,0.35);
+    font-family: "Consolas", "Courier New", monospace; flex-shrink: 0;
+  }
+  .navBtn {
+    all: unset; height: 30px; padding: 0 10px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--bg-3); border: 1px solid var(--line-1);
+    border-radius: var(--r-sm); color: var(--text-1);
+    font-family: "Consolas", monospace; font-size: 14px; font-weight: 800;
+    cursor: pointer; transition: color .15s, border-color .15s, background .15s;
+  }
+  .navBtn:hover { color: var(--accent); border-color: var(--accent); background: var(--bg-4); }
+  .urlRow { flex: 1; display: flex; gap: 8px; min-width: 0; }
+  #url {
+    flex: 1; height: 36px; padding: 0 12px;
+    background: var(--bg-0); color: var(--text-0);
+    border: 1px solid var(--line-1); border-radius: var(--r-sm);
+    outline: none; font-size: 13px;
+    font-family: "Consolas", monospace; min-width: 0;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  #url::placeholder { color: var(--text-3); }
+  #url:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,255,102,0.1), 0 0 18px rgba(0,255,102,0.2);
+  }
+  #go {
+    all: unset; height: 36px; padding: 0 18px;
+    background: var(--accent); color: #002a10;
+    border-radius: var(--r-sm);
+    font-family: "Consolas", monospace; font-size: 12px; font-weight: 800;
+    letter-spacing: 1px; text-transform: uppercase; cursor: pointer;
+    transition: background .15s, box-shadow .15s;
+    box-shadow: 0 0 12px rgba(0,255,102,0.35); flex-shrink: 0;
+  }
+  #go:hover { background: var(--accent-glow); box-shadow: 0 0 20px rgba(0,255,102,0.6); }
+
+  .frameWrap { flex: 1; position: relative; z-index: 10; background: var(--bg-0); overflow: hidden; }
+  #frame { width: 100%; height: 100%; border: 0; display: block; background: #fff; }
+  #empty {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 10px; color: var(--text-2); font-size: 14px;
+    font-family: "Consolas", monospace; letter-spacing: 1px;
+  }
+  #empty .big { font-size: 42px; font-weight: 900; color: var(--accent); text-shadow: 0 0 12px rgba(0,255,102,0.5); }
+
+  #status {
+    position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
+    padding: 8px 14px; background: rgba(7,16,10,0.92);
+    border: 1px solid var(--line-2); border-radius: 8px;
+    font-family: "Consolas", monospace; color: var(--accent); font-size: 12px;
+    opacity: 0; pointer-events: none; transition: opacity .15s; z-index: 20;
+  }
+  #status.on { opacity: 1; }
+  #status.err { color: #ff6b7a; border-color: #7f1d1d; }
+</style>
+</head>
+<body>
+<canvas id="matrix"></canvas>
+
+<header>
+  <h1>browse</h1>
+  <div class="urlRow">
+    <input type="text" id="url" placeholder="Enter URL or search..." autocomplete="off" spellcheck="false">
+  </div>
+  <button id="go">Go</button>
+</header>
+
+<div class="frameWrap">
+  <iframe id="frame" sandbox="allow-forms allow-modals allow-orientation-lock allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation" referrerpolicy="no-referrer"></iframe>
+  <div id="empty">
+    <div class="big">_</div>
+    <div>type a url and hit go</div>
+  </div>
+</div>
+
+<div id="status"></div>
+
+<script type="module">
+import { ScramjetController } from '@mercuryworkshop/scramjet';
+
+const $url = document.getElementById('url');
+const $frame = document.getElementById('frame');
+const $go = document.getElementById('go');
+const $status = document.getElementById('status');
+const $empty = document.getElementById('empty');
+
+const scramjet = new ScramjetController({
+  files: {
+    wasm: '/scramjet/scramjet.wasm',
+    all: '/scramjet/scramjet.all.js',
+    sync: '/scramjet/scramjet.sync.js'
+  },
+  prefix: '/scramjet/',
+  wisp: `wss://${location.host}/wisp/`
+});
+
+await scramjet.init();
+console.log('[scramjet] ready');
+
+function showStatus(msg, isErr) {
+  $status.textContent = msg;
+  $status.classList.toggle('err', !!isErr);
+  $status.classList.add('on');
+  clearTimeout(showStatus._t);
+  showStatus._t = setTimeout(() => $status.classList.remove('on'), 2500);
+}
+
+function normalizeUrl(input) {
+  let s = (input || '').trim();
+  if (!s) return null;
+  if (!/^https?:\/\//i.test(s)) {
+    if (!/^[a-z0-9.-]+\.[a-z]{2,}/i.test(s)) {
+      return 'https://duckduckgo.com/?q=' + encodeURIComponent(s);
+    }
+    s = 'https://' + s;
+  }
+  return s;
+}
+
+async function navigate(target) {
+  const url = normalizeUrl(target);
+  if (!url) return;
+  $empty.style.display = 'none';
+  showStatus('loading ' + new URL(url).hostname);
+  try {
+    const frame = scramjet.createFrame();
+    frame.frame.id = 'frame';
+    frame.go(url);
+    // swap the existing iframe for scramjet's frame
+    const old = document.getElementById('frame');
+    if (old && old.parentNode) old.parentNode.replaceChild(frame.frame, old);
+  } catch (e) {
+    showStatus('failed: ' + e.message, true);
+  }
+}
+
+$go.addEventListener('click', () => navigate($url.value));
+$url.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); navigate($url.value); }
+});
+
+// matrix rain
+(function() {
+  const canvas = document.getElementById('matrix');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d', { alpha: true });
+  const FONT_SIZE = 14, COL_WIDTH = FONT_SIZE + 2, FPS = 14, FRAME_MS = 1000 / FPS;
+  let cols = 0, drops = [], dpr = 1;
+  function resize() {
+    dpr = window.devicePixelRatio || 1;
+    canvas.width = window.innerWidth * dpr; canvas.height = window.innerHeight * dpr;
+    canvas.style.width = window.innerWidth + 'px'; canvas.style.height = window.innerHeight + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cols = Math.ceil(window.innerWidth / COL_WIDTH);
+    drops = new Array(cols);
+    for (let i = 0; i < cols; i++) drops[i] = Math.random() * (window.innerHeight / FONT_SIZE);
+  }
+  let lastDraw = 0;
+  function draw() {
+    requestAnimationFrame(draw);
+    const now = performance.now();
+    if (now - lastDraw < FRAME_MS) return;
+    lastDraw = now;
+    const w = window.innerWidth, h = window.innerHeight;
+    ctx.fillStyle = 'rgba(5, 8, 5, 0.10)'; ctx.fillRect(0, 0, w, h);
+    ctx.font = FONT_SIZE + 'px "Consolas", monospace'; ctx.textBaseline = 'top';
+    for (let i = 0; i < cols; i++) {
+      const ch = Math.random() > 0.5 ? '1' : '0';
+      const x = i * COL_WIDTH, y = drops[i] * FONT_SIZE, r = Math.random();
+      if (r > 0.985) ctx.fillStyle = 'rgba(190, 255, 210, 0.95)';
+      else if (r > 0.9) ctx.fillStyle = 'rgba(0, 255, 102, 0.9)';
+      else ctx.fillStyle = 'rgba(0, 200, 80, 0.65)';
+      ctx.fillText(ch, x, y);
+      if (y > h && Math.random() > 0.975) drops[i] = 0; else drops[i] += 1;
+    }
+  }
+  resize(); window.addEventListener('resize', resize); draw();
+})();
+</script>
+</body>
+</html>

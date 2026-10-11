@@ -1,0 +1,14 @@
+{
+  "name": "scramjet-app",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "@mercuryworkshop/scramjet": "^1.1.0",
+    "wisp-js": "^1.0.0",
+    "express": "^4.19.2",
+    "ws": "^8.18.0"
+  }
+}
